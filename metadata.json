@@ -1,0 +1,6 @@
+{
+  "name": "VoidDrop",
+  "description": "Nowoczesna platforma udostępniania plików w stylu Neon Void z rejestracją, weryfikacją 6-cyfrowym kodem e-mail, CAPTCHA, logowaniem Google i bazą MongoDB.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
