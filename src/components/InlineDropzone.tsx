@@ -1,5 +1,7 @@
-import { AlertCircle, CheckCircle2, FilePlus2, UploadCloud, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FilePlus2, Globe, Lock, UploadCloud, X } from 'lucide-react';
 import { useRef, useState, type DragEvent } from 'react';
+import type { AccentColor, FileVisibility } from '../types';
+import { getAccentTheme } from '../utils/accent';
 import { formatBytes } from '../utils/format';
 
 export interface UploadTaskItem {
@@ -13,6 +15,9 @@ export interface UploadTaskItem {
 
 interface InlineDropzoneProps {
   tasks: UploadTaskItem[];
+  accentColor?: AccentColor;
+  defaultVisibility: FileVisibility;
+  onChangeDefaultVisibility: (vis: FileVisibility) => void;
   onFilesSelected: (files: File[]) => void;
   onOpenModalWithDescription: () => void;
   onDismissTask: (localId: string) => void;
@@ -20,10 +25,14 @@ interface InlineDropzoneProps {
 
 export function InlineDropzone({
   tasks,
+  accentColor = 'cyan',
+  defaultVisibility,
+  onChangeDefaultVisibility,
   onFilesSelected,
   onOpenModalWithDescription,
   onDismissTask,
 }: InlineDropzoneProps) {
+  const theme = getAccentTheme(accentColor);
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -57,10 +66,10 @@ export function InlineDropzone({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`rounded-xl border border-dashed transition-colors px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+        className={`rounded-xl border border-dashed transition-colors px-5 py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${
           dragActive
-            ? 'border-cyan-400 bg-cyan-400/10'
-            : 'border-white/15 bg-[#090C14] hover:border-cyan-400/45'
+            ? theme.borderActive
+            : 'border-white/15 bg-[#090C14] hover:border-white/30'
         }`}
       >
         <input
@@ -77,11 +86,7 @@ export function InlineDropzone({
 
         <div className="flex items-center gap-3.5 min-w-0">
           <div
-            className={`h-11 w-11 rounded-xl border flex items-center justify-center shrink-0 transition-colors ${
-              dragActive
-                ? 'border-cyan-300 bg-cyan-400/20 text-cyan-200'
-                : 'border-cyan-400/25 bg-cyan-400/10 text-cyan-300'
-            }`}
+            className={`h-11 w-11 rounded-xl border flex items-center justify-center shrink-0 transition-colors ${theme.activeNav}`}
           >
             <UploadCloud className="w-5 h-5" />
           </div>
@@ -97,11 +102,36 @@ export function InlineDropzone({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() =>
+              onChangeDefaultVisibility(defaultVisibility === 'public' ? 'private' : 'public')
+            }
+            title="Domyślna widoczność dla szybkiego przesyłania"
+            className={`h-9 px-3 rounded-lg border text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
+              defaultVisibility === 'private'
+                ? 'border-amber-400/35 bg-amber-400/10 text-amber-200'
+                : 'border-white/15 bg-[#0B0E16] text-slate-300 hover:text-white'
+            }`}
+          >
+            {defaultVisibility === 'private' ? (
+              <>
+                <Lock className="w-3.5 h-3.5" />
+                <span>Prywatny</span>
+              </>
+            ) : (
+              <>
+                <Globe className="w-3.5 h-3.5" />
+                <span>Publiczny</span>
+              </>
+            )}
+          </button>
+
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="h-9 px-4 rounded-lg bg-cyan-400 text-[#05070B] font-semibold text-xs hover:bg-cyan-300 transition-colors cursor-pointer whitespace-nowrap"
+            className={`h-9 px-4 rounded-lg font-semibold text-xs transition-colors cursor-pointer whitespace-nowrap ${theme.solidBtn}`}
           >
             Wybierz pliki
           </button>
@@ -126,7 +156,7 @@ export function InlineDropzone({
                   <div className="flex items-center gap-2 shrink-0 font-mono tabular-nums">
                     <span className="text-slate-400">{formatBytes(task.size)}</span>
                     {task.status === 'uploading' && (
-                      <span className="text-cyan-300">{task.progress}%</span>
+                      <span className={theme.text}>{task.progress}%</span>
                     )}
                     {task.status === 'done' && (
                       <span className="text-emerald-300 inline-flex items-center gap-1 font-sans">
@@ -145,7 +175,7 @@ export function InlineDropzone({
                 {task.status === 'uploading' && (
                   <div className="h-1 w-full rounded-full bg-white/10 overflow-hidden">
                     <div
-                      className="h-full bg-cyan-400 transition-all duration-150"
+                      className={`h-full transition-all duration-150 ${theme.progressBg}`}
                       style={{ width: `${task.progress}%` }}
                     />
                   </div>

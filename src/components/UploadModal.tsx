@@ -1,18 +1,28 @@
-import { AlertCircle, FileUp, UploadCloud, X } from 'lucide-react';
+import { AlertCircle, FileUp, Globe, Lock, UploadCloud, X } from 'lucide-react';
 import { useRef, useState, type DragEvent, type FormEvent } from 'react';
-import type { FileItem } from '../types';
+import type { AccentColor, FileItem, FileVisibility } from '../types';
+import { getAccentTheme } from '../utils/accent';
 import { formatBytes } from '../utils/format';
 
 interface UploadModalProps {
   token: string;
+  accentColor?: AccentColor;
   initialFile?: File | null;
   onClose: () => void;
   onUploaded: (file: FileItem) => void;
 }
 
-export function UploadModal({ token, initialFile = null, onClose, onUploaded }: UploadModalProps) {
+export function UploadModal({
+  token,
+  accentColor = 'cyan',
+  initialFile = null,
+  onClose,
+  onUploaded,
+}: UploadModalProps) {
+  const theme = getAccentTheme(accentColor);
   const [selectedFile, setSelectedFile] = useState<File | null>(initialFile);
   const [description, setDescription] = useState('');
+  const [visibility, setVisibility] = useState<FileVisibility>('public');
   const [dragActive, setDragActive] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState('');
@@ -46,6 +56,7 @@ export function UploadModal({ token, initialFile = null, onClose, onUploaded }: 
 
     const formData = new FormData();
     formData.append('file', selectedFile);
+    formData.append('visibility', visibility);
     if (description.trim()) {
       formData.append('description', description.trim());
     }
@@ -116,8 +127,8 @@ export function UploadModal({ token, initialFile = null, onClose, onUploaded }: 
             onClick={() => inputRef.current?.click()}
             className={`rounded-xl border border-dashed p-7 text-center transition-colors cursor-pointer ${
               dragActive
-                ? 'border-cyan-400 bg-cyan-400/10'
-                : 'border-white/15 bg-[#07090F] hover:border-cyan-400/50'
+                ? theme.borderActive
+                : 'border-white/15 bg-[#07090F] hover:border-white/30'
             }`}
           >
             <input
@@ -126,7 +137,7 @@ export function UploadModal({ token, initialFile = null, onClose, onUploaded }: 
               className="hidden"
               onChange={(e) => handleFilePick(e.target.files?.[0])}
             />
-            <div className="mx-auto mb-3 h-11 w-11 rounded-xl bg-cyan-400/10 border border-cyan-400/25 flex items-center justify-center text-cyan-300">
+            <div className={`mx-auto mb-3 h-11 w-11 rounded-xl border flex items-center justify-center ${theme.activeNav}`}>
               {selectedFile ? <FileUp className="w-5 h-5" /> : <UploadCloud className="w-5 h-5" />}
             </div>
             {selectedFile ? (
@@ -134,7 +145,7 @@ export function UploadModal({ token, initialFile = null, onClose, onUploaded }: 
                 <p className="text-sm font-medium text-white truncate max-w-sm mx-auto">
                   {selectedFile.name}
                 </p>
-                <p className="font-mono text-xs text-cyan-300 tabular-nums">
+                <p className={`font-mono text-xs tabular-nums ${theme.text}`}>
                   {formatBytes(selectedFile.size)}
                 </p>
               </div>
@@ -160,20 +171,51 @@ export function UploadModal({ token, initialFile = null, onClose, onUploaded }: 
               maxLength={280}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Krótki opis ułatwiający wyszukanie pliku przez innych..."
-              className="h-11 w-full rounded-lg border border-white/10 bg-[#07090F] px-3.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20"
+              placeholder="Krótki opis ułatwiający wyszukanie pliku..."
+              className={`h-11 w-full rounded-lg border border-white/10 bg-[#07090F] px-3.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 ${theme.ringFocus}`}
             />
+          </div>
+
+          {/* Visibility Control */}
+          <div className="space-y-1.5">
+            <span className="text-xs font-medium text-slate-300 block">Kontrola dostępu</span>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setVisibility('public')}
+                className={`h-11 px-3 rounded-lg border text-xs font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer ${
+                  visibility === 'public'
+                    ? theme.activeNav
+                    : 'border-white/10 bg-[#07090F] text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>Publiczny</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisibility('private')}
+                className={`h-11 px-3 rounded-lg border text-xs font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer ${
+                  visibility === 'private'
+                    ? theme.activeNav
+                    : 'border-white/10 bg-[#07090F] text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Tylko dla mnie</span>
+              </button>
+            </div>
           </div>
 
           {progress !== null && (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs text-slate-300">
                 <span>Przesyłanie na serwer</span>
-                <span className="font-mono tabular-nums text-cyan-300">{progress}%</span>
+                <span className={`font-mono tabular-nums ${theme.text}`}>{progress}%</span>
               </div>
               <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
                 <div
-                  className="h-full bg-cyan-400 transition-all duration-150"
+                  className={`h-full transition-all duration-150 ${theme.progressBg}`}
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -202,9 +244,9 @@ export function UploadModal({ token, initialFile = null, onClose, onUploaded }: 
             <button
               type="submit"
               disabled={!selectedFile || progress !== null}
-              className="h-10 px-5 rounded-lg bg-cyan-400 text-[#05070B] font-semibold text-sm hover:bg-cyan-300 transition-colors cursor-pointer disabled:opacity-50"
+              className={`h-10 px-5 rounded-lg font-semibold text-sm transition-colors cursor-pointer disabled:opacity-50 ${theme.solidBtn}`}
             >
-              {progress !== null ? 'Wysyłanie...' : 'Udostępnij plik'}
+              {progress !== null ? 'Wysyłanie...' : 'Prześlij plik'}
             </button>
           </div>
         </form>

@@ -10,6 +10,7 @@ export interface SessionPayload {
   sub: string;
   email: string;
   nickname: string;
+  ver: number;
   exp: number;
 }
 
@@ -30,11 +31,17 @@ export function verifyPassword(password: string, storedHash: string): boolean {
   return crypto.timingSafeEqual(derivedBuf, originalBuf);
 }
 
-export function signSessionToken(user: { id: string; email: string; nickname: string }): string {
+export function signSessionToken(user: {
+  id: string;
+  email: string;
+  nickname: string;
+  tokenVersion?: number;
+}): string {
   const payload: SessionPayload = {
     sub: user.id,
     email: user.email,
     nickname: user.nickname,
+    ver: user.tokenVersion ?? 0,
     exp: Date.now() + 7 * 24 * 60 * 60 * 1000,
   };
   const encoded = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
@@ -186,3 +193,51 @@ export function verifyCaptchaChallenge(captchaId: string, answer: string): boole
     Buffer.from(entry.answerHash, 'hex')
   );
 }
+
+// In-memory sliding-window rate limiter for account operations
+const rateBuckets = new Map<string, number[]>();
+
+export function checkRateLimit(key: string, maxRequests: number, windowMs: number): boolean {
+  const now = Date.now();
+  const cutoff = now - windowMs;
+  const existing = (rateBuckets.get(key) || []).filter((ts) => ts > cutoff);
+  if (existing.length >= maxRequests) {
+    rateBuckets.set(key, existing);
+    return false;
+  }
+  existing.push(now);
+  rateBuckets.set(key, existing);
+
+  if (rateBuckets.size > 5000) {
+    const oldestKey = rateBuckets.keys().next().value;
+    if (oldestKey) rateBuckets.delete(oldestKey);
+  }
+  return true;
+}
+
+export function detectRasterImageType(
+  buf: Buffer
+): { ext: string; mime: string } | null {
+  if (buf.length < 12) return null;
+  // JPEG
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) {
+    return { ext: 'jpg', mime: 'image/jpeg' };
+  }
+  // PNG
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+    return { ext: 'png', mime: 'image/png' };
+  }
+  // GIF
+  if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38) {
+    return { ext: 'gif', mime: 'image/gif' };
+  }
+  // WEBP (RIFF....WEBP)
+  if (
+    buf.subarray(0, 4).toString('ascii') === 'RIFF' &&
+    buf.subarray(8, 12).toString('ascii') === 'WEBP'
+  ) {
+    return { ext: 'webp', mime: 'image/webp' };
+  }
+  return null;
+}
+

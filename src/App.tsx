@@ -22,5 +22,13 @@ export default function App() {
     return <AuthScreen onAuthenticated={handleAuthenticated} />;
   }
 
-  return <Dashboard token={authToken} user={currentUser} onLogout={handleLogout} />;
+  return (
+    <Dashboard
+      token={authToken}
+      user={currentUser}
+      onUserUpdated={setCurrentUser}
+      onTokenUpdated={setAuthToken}
+      onLogout={handleLogout}
+    />
+  );
 }
